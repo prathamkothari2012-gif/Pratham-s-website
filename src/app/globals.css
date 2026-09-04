@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+/* Enable a class-based dark mode alongside the OS preference, so the
+   header toggle can override `prefers-color-scheme`. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* Brand ramp. Swap these six values to re-skin the whole site. */
+  --color-brand-50: oklch(0.97 0.014 285);
+  --color-brand-100: oklch(0.94 0.03 285);
+  --color-brand-200: oklch(0.88 0.06 285);
+  --color-brand-300: oklch(0.79 0.1 285);
+  --color-brand-400: oklch(0.69 0.15 285);
+  --color-brand-500: oklch(0.6 0.19 285);
+  --color-brand-600: oklch(0.53 0.21 285);
+  --color-brand-700: oklch(0.46 0.19 285);
+  --color-brand-800: oklch(0.39 0.15 285);
+  --color-brand-900: oklch(0.33 0.11 285);
+
+  --animate-marquee: marquee 40s linear infinite;
+  --animate-rise: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(1rem);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+/* Semantic surface tokens, defined light-first then overridden for dark. */
+:root {
+  --background: oklch(0.99 0.002 285);
+  --foreground: oklch(0.21 0.01 285);
+  --muted: oklch(0.55 0.015 285);
+  --surface: oklch(1 0 0);
+  --border: oklch(0.92 0.005 285);
+}
+
+.dark {
+  --background: oklch(0.16 0.008 285);
+  --foreground: oklch(0.97 0.003 285);
+  --muted: oklch(0.68 0.015 285);
+  --surface: oklch(0.2 0.01 285);
+  --border: oklch(0.29 0.012 285);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    /* Keep anchored sections clear of the sticky header. */
+    scroll-padding-top: 5rem;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background-color: var(--color-brand-500);
+    color: white;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

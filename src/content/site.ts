@@ -14,12 +14,12 @@ export const site = {
   locale: "en_IN",
 
   contact: {
-    email: "hello@3dspoolhouse.com",
-    phone: "+91 00000 00000",
+    email: "samkitkothari0@gmail.com",
+    phone: "+91 74832 91876",
     // Digits only, international format — used to build the wa.me link.
-    whatsapp: "910000000000",
+    whatsapp: "917483291876",
     instagram: "https://www.instagram.com/3dspoolhouse/",
-    address: "Pune, Maharashtra, India",
+    address: "Sheshadripuram, Bengaluru, Karnataka, India",
     hours: "Mon–Sat, 10:00–19:00 IST",
   },
 

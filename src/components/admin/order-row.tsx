@@ -2,11 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { ChevronDown, ExternalLink } from "lucide-react";
-import { setOrderStatus } from "@/lib/server/actions";
+import { setOrderStatus, setPaymentStatus } from "@/lib/server/actions";
 import { ORDER_STATUSES, type Order } from "@/lib/types";
 import { formatPrice } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
+import { PaymentBadge } from "@/components/admin/payment-badge";
 
 export function OrderRow({
   order,
@@ -53,6 +54,7 @@ export function OrderRow({
           </div>
         </button>
 
+        <PaymentBadge status={order.payment.status} />
         <OrderStatusBadge status={order.status} />
 
         <p className="text-sm font-semibold tabular-nums">
@@ -166,7 +168,51 @@ export function OrderRow({
             </dl>
           </div>
 
-          <div className="rounded-xl border border-border p-4">
+          <div className="space-y-4">
+            <div className="rounded-xl border border-border p-4">
+              <h3 className="text-sm font-semibold">Payment</h3>
+              <dl className="mt-3 space-y-2 text-sm">
+                <Row label="Method" value="UPI" />
+                <Row label="Paid to" value={order.payment.payeeVpa} />
+                <Row
+                  label="Customer's reference"
+                  value={order.payment.utr ?? "not sent yet"}
+                />
+                {order.payment.submittedAt && (
+                  <Row
+                    label="Reported"
+                    value={new Date(order.payment.submittedAt).toLocaleString("en-IN", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
+                  />
+                )}
+              </dl>
+
+              <label className="sr-only" htmlFor={`payment-${order.id}`}>
+                Payment status
+              </label>
+              <select
+                id={`payment-${order.id}`}
+                value={order.payment.status}
+                disabled={pending}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  startTransition(() => setPaymentStatus(order.id, next));
+                }}
+                className="mt-4 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus:border-brand-500 focus:outline-none disabled:opacity-50"
+              >
+                <option value="unpaid">Unpaid</option>
+                <option value="submitted">Customer says paid</option>
+                <option value="verified">Paid — confirmed in my account</option>
+                <option value="refunded">Refunded</option>
+              </select>
+              <p className="mt-2 text-xs text-muted">
+                Check the amount against your UPI app before marking it paid.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-border p-4">
             <h3 className="text-sm font-semibold">Money</h3>
             <dl className="mt-3 space-y-2 text-sm">
               <Row label="Subtotal" value={formatPrice(order.totals.subtotal)} />
@@ -185,6 +231,7 @@ export function OrderRow({
                 <Row label="Gross profit" value={profit} strong />
               </div>
             </dl>
+            </div>
           </div>
         </div>
       )}

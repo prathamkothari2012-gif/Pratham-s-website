@@ -37,7 +37,8 @@ export type Product = {
   /** Bullet points on the product page. */
   highlights: string[];
   optionGroups: ProductOptionGroup[];
-  /** Decorative gradient pair for the placeholder artwork. */
+  /** Decorative gradient pair for the placeholder artwork. Kept within the
+   *  brand's blue family so the shop grid reads as one set. */
   accent: [string, string];
   featured?: boolean;
 };
@@ -121,7 +122,7 @@ export const products: Product[] = [
       },
       finishing,
     ],
-    accent: ["#6366f1", "#a855f7"],
+    accent: ["#3282b8", "#8cc6e8"],
     featured: true,
   },
   {
@@ -153,7 +154,7 @@ export const products: Product[] = [
       },
       finishing,
     ],
-    accent: ["#10b981", "#0ea5e9"],
+    accent: ["#0f4c75", "#3282b8"],
     featured: true,
   },
   {
@@ -178,7 +179,7 @@ export const products: Product[] = [
       },
       infill,
     ],
-    accent: ["#0ea5e9", "#6366f1"],
+    accent: ["#1d7a8c", "#5ec5c5"],
   },
   {
     slug: "resin-detail-print",
@@ -210,7 +211,7 @@ export const products: Product[] = [
         ],
       },
     ],
-    accent: ["#a855f7", "#ec4899"],
+    accent: ["#2d5f9e", "#7cb8e8"],
     featured: true,
   },
   {
@@ -249,7 +250,7 @@ export const products: Product[] = [
         ],
       },
     ],
-    accent: ["#f59e0b", "#ef4444"],
+    accent: ["#1b262c", "#3282b8"],
   },
   {
     slug: "carbon-nylon-part",
@@ -273,7 +274,7 @@ export const products: Product[] = [
         ],
       },
     ],
-    accent: ["#64748b", "#334155"],
+    accent: ["#3d5866", "#7d97a6"],
   },
   {
     slug: "cad-design",
@@ -306,7 +307,7 @@ export const products: Product[] = [
         ],
       },
     ],
-    accent: ["#ec4899", "#f59e0b"],
+    accent: ["#0f4c75", "#5ec5c5"],
   },
   {
     slug: "scan-and-repair",
@@ -330,7 +331,7 @@ export const products: Product[] = [
         ],
       },
     ],
-    accent: ["#14b8a6", "#6366f1"],
+    accent: ["#216894", "#bbe1fa"],
   },
 ];
 

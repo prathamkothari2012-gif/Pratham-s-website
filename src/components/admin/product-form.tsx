@@ -184,14 +184,14 @@ export function ProductForm({
                 label="Card colour, from"
                 name="accentFrom"
                 type="color"
-                defaultValue={product?.accent[0] ?? "#6366f1"}
+                defaultValue={product?.accent[0] ?? "#3282b8"}
                 className="[&_input]:h-11 [&_input]:p-1"
               />
               <Field
                 label="Card colour, to"
                 name="accentTo"
                 type="color"
-                defaultValue={product?.accent[1] ?? "#a855f7"}
+                defaultValue={product?.accent[1] ?? "#8cc6e8"}
                 className="[&_input]:h-11 [&_input]:p-1"
               />
             </div>

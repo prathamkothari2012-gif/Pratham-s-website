@@ -15,7 +15,7 @@ export default async function AnalyticsPage({ searchParams }: Props) {
   const { period: raw } = await searchParams;
   const period = (PERIODS.find((p) => p.id === raw)?.id ?? "12m") as Period;
 
-  const [{ pnl, previous, months, topProducts }, db] = await Promise.all([
+  const [{ pnl, previous, months, topProducts, outstanding }, db] = await Promise.all([
     getAnalytics(period),
     readDb(),
   ]);
@@ -30,8 +30,8 @@ export default async function AnalyticsPage({ searchParams }: Props) {
             Profit &amp; loss
           </h1>
           <p className="mt-1 text-sm text-muted">
-            GST is excluded from revenue — it is collected for the government,
-            not earned. Cancelled orders are left out entirely.
+            Revenue counts only orders you have confirmed as paid. GST is
+            excluded — it is collected for the government, not earned.
           </p>
         </div>
 
@@ -56,7 +56,7 @@ export default async function AnalyticsPage({ searchParams }: Props) {
         <StatCard
           label="Revenue"
           value={formatPrice(pnl.revenue)}
-          hint="excl. GST"
+          hint="paid orders, excl. GST"
           change={previous ? delta(pnl.revenue, previous.revenue) : null}
         />
         <StatCard
@@ -110,6 +110,10 @@ export default async function AnalyticsPage({ searchParams }: Props) {
                 />
               </div>
               <div className="mt-4 space-y-3 border-t border-border pt-4 text-xs">
+                <Line
+                  label="Outstanding (placed, not yet paid)"
+                  value={formatPrice(outstanding.amount)}
+                />
                 <Line
                   label="GST collected (owed, not income)"
                   value={formatPrice(pnl.taxCollected)}

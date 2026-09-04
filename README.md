@@ -24,6 +24,7 @@ The dashboard lives at `/admin`. In development the password is `spoolhouse`.
 | `/shop/[slug]` | Product page with an option configurator and live pricing |
 | `/cart` | Cart, editable quantities, discount code entry |
 | `/checkout` | Customer and delivery details, places the order |
+| `/order/[ref]` | Payment page — UPI QR, deep link, UTR entry (token-guarded) |
 | `/contact` | Quote enquiry form |
 
 **Owner dashboard** (`/admin`, password protected)
@@ -47,7 +48,9 @@ runs. After that the catalog lives in the datastore and is edited through
 `/admin/products`.
 
 Brand colours are the `--color-brand-*` ramp at the top of
-`src/app/globals.css`.
+`src/app/globals.css`, built from a four-colour palette (`#1B262C` ink,
+`#0F4C75` deep, `#3282B8` primary, `#BBE1FA` pale). The semantic surface
+tokens below it define light and dark mode.
 
 ## Configuration
 
@@ -76,13 +79,38 @@ deploy there, reimplement `readDb` and `writeDb` in `src/lib/server/db.ts`
 against a real database — Postgres, Supabase, Turso. Nothing else in the app
 touches the file.
 
-## Taking payments
+## Payments
 
-Checkout captures the order and shows a reference; it does not charge a card.
-The place to add that is marked `INTEGRATION POINT` in
-`src/app/api/orders/route.ts`: create a Razorpay or Stripe session there,
-return its redirect URL, and confirm the order from the payment webhook.
-`src/app/api/contact/route.ts` has the same marker for wiring up email.
+Customers pay by **UPI, directly to the shop's UPI ID** — no gateway, no
+per-transaction fee, no third party holding the money.
+
+After checkout the customer gets a payment page (`/order/<ref>?t=<token>`)
+with a QR code and an "Open my UPI app" link. Both are built from the NPCI
+deep-link spec with the amount and order reference pre-filled. The QR is
+rendered on our own server, so nobody outside sees an order's amount.
+
+Set the UPI ID in `site.payment.upiId` in `src/content/site.ts`. It must be
+the exact VPA registered against the phone number — the handle differs by app
+(`@ybl` PhonePe, `@okaxis`/`@oksbi` Google Pay, `@paytm` Paytm, `@upi` BHIM).
+Copy it from the UPI app rather than guessing; a wrong handle means payments
+silently fail.
+
+**One thing to be clear about:** a direct-to-VPA setup has no callback. Nothing
+tells the server when money arrives. So the flow is:
+
+1. Customer pays and enters the UTR their UPI app shows them.
+2. The order moves to *Awaiting check*.
+3. The owner confirms it against their account in `/admin/orders` and marks it
+   **Paid**.
+
+Because of that, **unpaid orders are not counted as revenue**. The P&L is cash
+basis — only payments the owner has verified. Money owed shows separately as
+"outstanding" on the dashboard.
+
+To automate confirmation, replace the `INTEGRATION POINT` in
+`src/app/api/orders/route.ts` with a Razorpay or Stripe session and mark
+orders paid from that provider's webhook. `src/app/api/contact/route.ts` has
+the same marker for wiring up email.
 
 ## How money is calculated
 
@@ -93,7 +121,8 @@ return its redirect URL, and confirm the order from the payment webhook.
 - Each order line stores the cost price *at the time of sale*, so later
   repricing never rewrites historical margins.
 - P&L excludes GST from revenue (it is collected for the government, not
-  earned) and excludes cancelled orders.
+  earned), excludes cancelled orders, and counts only payments the owner has
+  verified — an order placed but unpaid is not revenue.
 
 ## Scripts
 

@@ -23,6 +23,20 @@ export const site = {
     hours: "Mon–Sat, 10:00–19:00 IST",
   },
 
+  /**
+   * How customers pay. Payment goes straight to this UPI ID — there is no
+   * payment gateway and no middleman taking a cut.
+   *
+   * `upiId` MUST be the exact VPA money should land in — copy it from the UPI
+   * app rather than typing it, because a wrong handle means payments silently
+   * fail. It does not have to match the contact phone number above.
+   */
+  payment: {
+    upiId: "nithikothari3@okhdfcbank",
+    /** Shown in the customer's UPI app as the person being paid. */
+    payeeName: "3D Spool House",
+  },
+
   /** Formatting for every price on the site. */
   currency: {
     code: "INR",
@@ -94,37 +108,37 @@ export const materials = [
     name: "PLA",
     blurb: "Crisp detail, huge colour range, great for display pieces and prototypes.",
     specs: ["Easy to print", "Not heat resistant", "Biodegradable"],
-    tone: "brand",
+    tone: "primary",
   },
   {
     name: "PETG",
     blurb: "Tougher and weather-resistant. The default for parts that have a job to do.",
     specs: ["Impact resistant", "Food safe options", "Outdoor friendly"],
-    tone: "emerald",
+    tone: "deep",
   },
   {
     name: "ABS / ASA",
     blurb: "Heat and UV tolerant, suited to automotive and enclosure parts.",
     specs: ["Heat resistant", "UV stable", "Post-machinable"],
-    tone: "amber",
+    tone: "teal",
   },
   {
     name: "TPU",
     blurb: "Genuinely flexible. Gaskets, grips, phone cases and shock absorbers.",
     specs: ["Rubber-like", "Abrasion resistant", "Shore 95A"],
-    tone: "sky",
+    tone: "pale",
   },
   {
     name: "Resin",
     blurb: "The finest surface finish we offer, for detail that FDM can't reach.",
     specs: ["0.05 mm layers", "Smooth finish", "Paint ready"],
-    tone: "violet",
+    tone: "indigo",
   },
   {
     name: "Carbon-filled nylon",
     blurb: "Stiff, light and strong — for brackets and fixtures under real stress.",
     specs: ["High stiffness", "Low warp", "Engineering grade"],
-    tone: "rose",
+    tone: "slate",
   },
 ] as const;
 
@@ -187,6 +201,10 @@ export const faqs = [
   {
     q: "How is pricing calculated?",
     a: "By material used, print time and any finishing work. The prices listed in the shop are our starting rates; a custom part is quoted on the actual model so you always know the total before you commit.",
+  },
+  {
+    q: "How do I pay?",
+    a: "By UPI, straight to us. After placing an order you get a QR code and a link that opens Google Pay, PhonePe, Paytm or any other UPI app with the amount already filled in. Enter the reference number your app gives you and we confirm it, usually within a few hours, then start printing.",
   },
   {
     q: "Do you ship outside India?",

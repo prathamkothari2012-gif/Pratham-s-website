@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, PackageX } from "lucide-react";
+import { ArrowRight, PackageX, Wallet } from "lucide-react";
 import { getAnalytics } from "@/lib/server/analytics";
 import { readDb } from "@/lib/server/db";
 import { formatPrice } from "@/lib/utils";
@@ -9,7 +9,7 @@ import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 
 export default async function AdminOverviewPage() {
   const [analytics, db] = await Promise.all([getAnalytics("30d"), readDb()]);
-  const { pnl, previous, months, topProducts, recentOrders } = analytics;
+  const { pnl, previous, months, topProducts, recentOrders, outstanding } = analytics;
 
   const lowMarginProducts = db.products.filter(
     (p) => p.active && p.basePrice > 0 && (p.basePrice - p.costPrice) / p.basePrice < 0.25,
@@ -37,7 +37,7 @@ export default async function AdminOverviewPage() {
         <StatCard
           label="Revenue"
           value={formatPrice(pnl.revenue)}
-          hint="excl. GST"
+          hint="paid orders, excl. GST"
           change={previous ? delta(pnl.revenue, previous.revenue) : null}
         />
         <StatCard
@@ -60,6 +60,33 @@ export default async function AdminOverviewPage() {
           }
         />
       </div>
+
+      {outstanding.orderCount > 0 && (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5">
+          <div className="flex items-center gap-3">
+            <Wallet className="size-5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+            <div>
+              <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+                {formatPrice(outstanding.amount)} awaiting payment
+              </p>
+              <p className="mt-0.5 text-xs text-muted">
+                {outstanding.orderCount} order
+                {outstanding.orderCount === 1 ? "" : "s"} placed but not yet
+                confirmed as paid
+                {outstanding.awaitingCheck > 0 &&
+                  ` · ${outstanding.awaitingCheck} waiting on you to check a UPI reference`}
+                . Unpaid orders are not counted as revenue.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/admin/orders?payment=submitted"
+            className="shrink-0 rounded-full border border-amber-500/40 px-4 py-2 text-sm font-medium transition hover:bg-amber-500/10"
+          >
+            Review payments
+          </Link>
+        </div>
+      )}
 
       <div className="mt-6">
         <ProfitChart months={months} />

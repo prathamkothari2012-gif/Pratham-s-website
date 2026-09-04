@@ -8,17 +8,20 @@
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
-  /* Brand ramp. Swap these six values to re-skin the whole site. */
-  --color-brand-50: oklch(0.97 0.014 285);
-  --color-brand-100: oklch(0.94 0.03 285);
-  --color-brand-200: oklch(0.88 0.06 285);
-  --color-brand-300: oklch(0.79 0.1 285);
-  --color-brand-400: oklch(0.69 0.15 285);
-  --color-brand-500: oklch(0.6 0.19 285);
-  --color-brand-600: oklch(0.53 0.21 285);
-  --color-brand-700: oklch(0.46 0.19 285);
-  --color-brand-800: oklch(0.39 0.15 285);
-  --color-brand-900: oklch(0.33 0.11 285);
+  /* Brand ramp, built from the four-colour palette:
+     #1B262C ink · #0F4C75 deep · #3282B8 primary · #BBE1FA pale.
+     The four are pinned at 900/700/500/200; the rest are interpolated to give
+     the shades hover, borders and tints need. Swap these to re-skin the site. */
+  --color-brand-50: #f2f9fe;
+  --color-brand-100: #ddeefc;
+  --color-brand-200: #bbe1fa;
+  --color-brand-300: #8cc6e8;
+  --color-brand-400: #59a5d3;
+  --color-brand-500: #3282b8;
+  --color-brand-600: #216894;
+  --color-brand-700: #0f4c75;
+  --color-brand-800: #0c3a58;
+  --color-brand-900: #1b262c;
 
   --animate-marquee: marquee 40s linear infinite;
   --animate-rise: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -44,21 +47,24 @@
   }
 }
 
-/* Semantic surface tokens, defined light-first then overridden for dark. */
+/* Semantic surface tokens, defined light-first then overridden for dark.
+   Light mode reads as cool paper; dark mode sits on the palette's #1B262C. */
 :root {
-  --background: oklch(0.99 0.002 285);
-  --foreground: oklch(0.21 0.01 285);
-  --muted: oklch(0.55 0.015 285);
-  --surface: oklch(1 0 0);
-  --border: oklch(0.92 0.005 285);
+  --background: #f7fafc;
+  --foreground: #1b262c;
+  --muted: #5a6b76;
+  --surface: #ffffff;
+  --border: #dbe6ee;
 }
 
 .dark {
-  --background: oklch(0.16 0.008 285);
-  --foreground: oklch(0.97 0.003 285);
-  --muted: oklch(0.68 0.015 285);
-  --surface: oklch(0.2 0.01 285);
-  --border: oklch(0.29 0.012 285);
+  --background: #1b262c;
+  --foreground: #e8f2fa;
+  /* Softer than the palette's #BBE1FA, which is too saturated for long
+     stretches of secondary text. */
+  --muted: #92abbd;
+  --surface: #22323c;
+  --border: #33454f;
 }
 
 @theme inline {

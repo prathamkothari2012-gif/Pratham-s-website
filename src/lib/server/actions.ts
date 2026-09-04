@@ -11,6 +11,7 @@ import {
   type StoredProduct,
   ORDER_STATUSES,
 } from "@/lib/server/db";
+import { PAYMENT_STATUSES, type PaymentStatus } from "@/lib/types";
 import type { Category, ProductOptionGroup } from "@/content/catalog";
 import { categories } from "@/content/catalog";
 
@@ -104,8 +105,8 @@ function readProductForm(form: FormData) {
       .filter(Boolean),
     optionGroups: parseOptionGroups(str(form, "optionGroups")),
     accent: [
-      str(form, "accentFrom") || "#6366f1",
-      str(form, "accentTo") || "#a855f7",
+      str(form, "accentFrom") || "#3282b8",
+      str(form, "accentTo") || "#8cc6e8",
     ] as [string, string],
     featured: form.get("featured") === "on",
     active: form.get("active") === "on",
@@ -199,6 +200,36 @@ export async function setOrderStatus(
     const order = db.orders.find((o) => o.id === id);
     if (order) order.status = status as OrderStatus;
   });
+  revalidatePath("/admin/orders");
+  revalidatePath("/admin");
+  revalidatePath("/admin/analytics");
+}
+
+/** The owner confirms, or un-confirms, that a UPI payment actually landed.
+ *  Nothing automated can do this without a payment gateway — it is a human
+ *  checking their bank against the reported UTR. */
+export async function setPaymentStatus(
+  id: string,
+  status: string,
+): Promise<void> {
+  await requireOwner();
+  if (!PAYMENT_STATUSES.includes(status as PaymentStatus)) return;
+
+  await writeDb((db) => {
+    const order = db.orders.find((o) => o.id === id);
+    if (!order) return;
+
+    order.payment.status = status as PaymentStatus;
+    order.payment.verifiedAt =
+      status === "verified" ? new Date().toISOString() : null;
+
+    // Confirming payment moves a still-pending order along, so the owner does
+    // not have to set two dropdowns for the same event.
+    if (status === "verified" && order.status === "pending") {
+      order.status = "confirmed";
+    }
+  });
+
   revalidatePath("/admin/orders");
   revalidatePath("/admin");
   revalidatePath("/admin/analytics");

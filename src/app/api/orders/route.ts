@@ -1,11 +1,14 @@
+import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
+import { site } from "@/content/site";
 import { calculateTotals, priceLine } from "@/lib/pricing";
 import { newId, writeDb, type Order, type OrderLine } from "@/lib/server/db";
+import { buildPaymentInstructions } from "@/lib/server/payment";
 import { isRecord, parseLines, validateCustomer } from "@/lib/validation";
 
 /** Human-friendly order reference, e.g. SH-4F2A9C. */
 function orderReference(): string {
-  return `SH-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+  return `SH-${randomBytes(4).toString("hex").slice(0, 6).toUpperCase()}`;
 }
 
 export async function POST(request: Request) {
@@ -82,11 +85,23 @@ export async function POST(request: Request) {
 
     const totals = calculateTotals(subtotal, discountAmount);
 
+    const reference = orderReference();
     const record: Order = {
       id: newId("ord"),
-      reference: orderReference(),
+      reference,
       createdAt: new Date().toISOString(),
       status: "pending",
+      // Unguessable, so the payment page cannot be found by trying references.
+      accessToken: randomBytes(16).toString("hex"),
+      payment: {
+        method: "upi",
+        status: "unpaid",
+        payeeVpa: site.payment.upiId,
+        amount: totals.total,
+        utr: null,
+        submittedAt: null,
+        verifiedAt: null,
+      },
       customer,
       lines,
       discountCode: appliedCode,
@@ -104,13 +119,25 @@ export async function POST(request: Request) {
     );
   }
 
-  // INTEGRATION POINT — the order is now persisted and visible in /admin.
-  // To take payment, create a Razorpay/Stripe session here and return its
-  // redirect URL, then mark the order confirmed from the payment webhook.
-  // To notify, send mail from here (Resend, Postmark, SES).
+  // The customer pays by UPI straight to the shop's VPA. Nothing calls back
+  // to say the money arrived, so the order stays "unpaid" until the customer
+  // reports a UTR and the owner verifies it in /admin.
+  const payment = await buildPaymentInstructions({
+    amount: order.totals.total,
+    reference: order.reference,
+  });
+
+  // INTEGRATION POINT — to automate payment confirmation, swap this for a
+  // Razorpay/Stripe session and mark the order paid from their webhook.
+  // To email the customer their payment link, send it from here.
 
   return NextResponse.json(
-    { reference: order.reference, totals: order.totals },
+    {
+      reference: order.reference,
+      accessToken: order.accessToken,
+      totals: order.totals,
+      payment,
+    },
     { status: 201 },
   );
 }

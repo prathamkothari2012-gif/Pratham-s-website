@@ -9,6 +9,7 @@ import { validateCustomer, type FieldErrors } from "@/lib/validation";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { OrderSummary } from "@/components/order-summary";
+import { UpiPayment, type PaymentInfo } from "@/components/upi-payment";
 
 type Status = "idle" | "submitting" | "done";
 
@@ -16,7 +17,11 @@ export function CheckoutForm() {
   const { resolved, lines, discount, clear, ready } = useCart();
   const [errors, setErrors] = useState<FieldErrors>({});
   const [status, setStatus] = useState<Status>("idle");
-  const [reference, setReference] = useState<string | null>(null);
+  const [placed, setPlaced] = useState<{
+    reference: string;
+    accessToken: string;
+    payment: PaymentInfo;
+  } | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -56,7 +61,11 @@ export function CheckoutForm() {
         return;
       }
 
-      setReference(data.reference);
+      setPlaced({
+        reference: data.reference,
+        accessToken: data.accessToken,
+        payment: data.payment,
+      });
       setStatus("done");
       clear();
     } catch {
@@ -67,22 +76,46 @@ export function CheckoutForm() {
     }
   }
 
-  if (status === "done" && reference) {
+  if (status === "done" && placed) {
+    const orderUrl = `/order/${placed.reference}?t=${placed.accessToken}`;
+
     return (
-      <div className="mx-auto mt-12 max-w-lg rounded-2xl border border-border bg-surface p-8 text-center">
-        <CheckCircle2 className="mx-auto size-10 text-brand-500" aria-hidden />
-        <h2 className="mt-4 text-xl font-semibold">Order received</h2>
-        <p className="mt-2 text-sm/6 text-muted">
-          Your reference is{" "}
-          <span className="font-mono font-semibold text-foreground">
-            {reference}
-          </span>
-          . We will review your file and email you a confirmed total and payment
-          link within one working day.
+      <div className="mx-auto mt-12 max-w-2xl">
+        <div className="text-center">
+          <CheckCircle2 className="mx-auto size-10 text-brand-500" aria-hidden />
+          <h2 className="mt-4 text-xl font-semibold">Order received</h2>
+          <p className="mt-2 text-sm/6 text-muted">
+            Your reference is{" "}
+            <span className="font-mono font-semibold text-foreground">
+              {placed.reference}
+            </span>
+            . Pay below to put it in the print queue.
+          </p>
+        </div>
+
+        <div className="mt-8">
+          <UpiPayment
+            reference={placed.reference}
+            accessToken={placed.accessToken}
+            payment={placed.payment}
+          />
+        </div>
+
+        <p className="mt-6 text-center text-sm text-muted">
+          <Link
+            href={orderUrl}
+            className="text-brand-600 hover:underline dark:text-brand-400"
+          >
+            Bookmark this order page
+          </Link>{" "}
+          to come back and pay later.
         </p>
-        <ButtonLink href="/shop" className="mt-6">
-          Back to the shop
-        </ButtonLink>
+
+        <div className="mt-6 text-center">
+          <ButtonLink href="/shop" variant="secondary">
+            Back to the shop
+          </ButtonLink>
+        </div>
       </div>
     );
   }

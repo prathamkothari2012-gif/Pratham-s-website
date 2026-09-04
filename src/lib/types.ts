@@ -43,11 +43,40 @@ export type OrderLine = {
   options: string[];
 };
 
+/** How far along the customer's UPI payment is. There is no payment gateway
+ *  in the loop, so "submitted" means the customer says they have paid and
+ *  "verified" means the owner has confirmed it landed in their account. */
+export type PaymentStatus = "unpaid" | "submitted" | "verified" | "refunded";
+
+export const PAYMENT_STATUSES: PaymentStatus[] = [
+  "unpaid",
+  "submitted",
+  "verified",
+  "refunded",
+];
+
+export type Payment = {
+  method: "upi";
+  status: PaymentStatus;
+  /** The UPI ID the customer was asked to pay, captured at order time so a
+   *  later change of UPI ID does not rewrite old orders. */
+  payeeVpa: string;
+  amount: number;
+  /** The 12-digit UTR / reference the customer reads off their UPI app. */
+  utr: string | null;
+  submittedAt: string | null;
+  verifiedAt: string | null;
+};
+
 export type Order = {
   id: string;
   reference: string;
   createdAt: string;
   status: OrderStatus;
+  /** Random secret in the customer's payment-page URL, so an order cannot be
+   *  looked up by guessing short references. */
+  accessToken: string;
+  payment: Payment;
   customer: {
     name: string;
     email: string;

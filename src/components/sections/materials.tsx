@@ -2,14 +2,16 @@ import { materials } from "@/content/site";
 import { Container } from "@/components/ui/container";
 import { SectionHeading } from "@/components/ui/section-heading";
 
-/** Static classes per tone — Tailwind cannot see dynamically built names. */
+/** Static classes per tone — Tailwind cannot see dynamically built names.
+ *  All six sit in the brand's blue-to-teal range so the row reads as a set
+ *  rather than six unrelated colours. */
 const tones: Record<string, string> = {
-  brand: "from-brand-500 to-brand-300",
-  emerald: "from-emerald-500 to-teal-300",
-  amber: "from-amber-500 to-orange-300",
-  sky: "from-sky-500 to-cyan-300",
-  violet: "from-violet-500 to-fuchsia-300",
-  rose: "from-rose-500 to-pink-300",
+  primary: "from-brand-500 to-brand-300",
+  deep: "from-brand-700 to-brand-500",
+  teal: "from-[#1d7a8c] to-[#5ec5c5]",
+  pale: "from-brand-400 to-brand-200",
+  indigo: "from-[#2d5f9e] to-[#7cb8e8]",
+  slate: "from-[#3d5866] to-[#92abbd]",
 };
 
 export function Materials() {
@@ -29,7 +31,7 @@ export function Materials() {
               className="overflow-hidden rounded-2xl border border-border bg-surface"
             >
               <div
-                className={`h-1.5 bg-gradient-to-r ${tones[material.tone] ?? tones.brand}`}
+                className={`h-1.5 bg-gradient-to-r ${tones[material.tone] ?? tones.primary}`}
               />
               <div className="p-6">
                 <h3 className="text-lg font-semibold">{material.name}</h3>

@@ -4,10 +4,13 @@ import { readDb, type Order } from "@/lib/server/db";
 /**
  * Profit and loss for the shop.
  *
- * Two deliberate accounting choices:
+ * Three deliberate accounting choices:
  *  - GST is excluded from revenue. It is collected on the government's behalf
  *    and is a liability, not income, so it is reported separately.
  *  - Cancelled orders are excluded entirely.
+ *  - Only orders whose payment the owner has *verified* count as revenue.
+ *    An order placed but not yet paid is not money, so it is reported
+ *    separately as "outstanding" rather than inflating profit.
  */
 
 export type Period = "30d" | "90d" | "12m" | "all";
@@ -57,6 +60,14 @@ export type ProfitAndLoss = {
   averageOrderValue: number;
 };
 
+export type Outstanding = {
+  /** Charged totals for orders placed but not yet confirmed as paid. */
+  amount: number;
+  orderCount: number;
+  /** Customer has reported a UTR and is waiting on the owner to check it. */
+  awaitingCheck: number;
+};
+
 export type MonthPoint = {
   /** YYYY-MM */
   month: string;
@@ -79,6 +90,7 @@ export type ProductPerformance = {
 
 export type AnalyticsSnapshot = {
   pnl: ProfitAndLoss;
+  outstanding: Outstanding;
   /** Same figures for the immediately preceding window, for trend arrows.
    *  Null when the period is "all time" and there is nothing to compare to. */
   previous: ProfitAndLoss | null;
@@ -122,7 +134,22 @@ export async function getAnalytics(
 ): Promise<AnalyticsSnapshot> {
   const db = await readDb();
 
-  const billable = db.orders.filter((o) => o.status !== "cancelled");
+  // Revenue means money received, so an order only counts once its payment
+  // has been verified against the account.
+  const billable = db.orders.filter(
+    (o) => o.status !== "cancelled" && o.payment.status === "verified",
+  );
+
+  const unpaid = db.orders.filter(
+    (o) =>
+      o.status !== "cancelled" &&
+      (o.payment.status === "unpaid" || o.payment.status === "submitted"),
+  );
+  const outstanding: Outstanding = {
+    amount: unpaid.reduce((sum, o) => sum + o.totals.total, 0),
+    orderCount: unpaid.length,
+    awaitingCheck: unpaid.filter((o) => o.payment.status === "submitted").length,
+  };
   const from = since(period);
   const windowMs = from === 0 ? 0 : Date.now() - from;
 
@@ -202,6 +229,7 @@ export async function getAnalytics(
 
   return {
     pnl: summarise(inWindow, expensesInWindow),
+    outstanding,
     previous,
     months,
     topProducts: [...byProduct.values()].sort((a, b) => b.revenue - a.revenue),

@@ -67,11 +67,15 @@ two is unset.
 
 ## Deploying to Netlify
 
-```bash
-# Push the repo to GitHub, then in Netlify: Add new site -> Import from Git.
-# netlify.toml already sets the build command, publish directory and plugin,
-# so the defaults it offers are correct.
-```
+Push the repo to GitHub, then in Netlify: **Add new site -> Import from Git**.
+`netlify.toml` sets only the build command and Node version — Netlify detects
+Next.js and installs its own adapter, which configures everything else.
+
+Do **not** add a `publish` directory or a `[[plugins]]` entry for
+`@netlify/plugin-nextjs`, and do not pin the adapter in `package.json`.
+Publishing `.next` directly serves the raw build folder as static files and
+returns 404 on every route; pinning the adapter can hold it at a version
+behind the installed Next.js.
 
 Set these environment variables in **Site settings -> Environment variables**:
 

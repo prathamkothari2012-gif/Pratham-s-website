@@ -1,16 +1,20 @@
 # Netlify deployment config.
 #
-# The Next.js plugin turns the App Router build into Netlify Functions, so
-# server components, route handlers and Server Actions all work. Orders are
-# stored in Netlify Blobs rather than on disk — see src/lib/server/db.ts —
-# because a function's filesystem does not survive between requests.
+# Deliberately minimal: Netlify detects Next.js and installs its own adapter,
+# which sets the publish directory and provisions the functions that run
+# server components, route handlers and Server Actions.
+#
+# Do NOT add `publish` or a [[plugins]] block for @netlify/plugin-nextjs here.
+# Setting publish to ".next" makes Netlify serve the raw build folder as static
+# files, which returns 404 for every route, and pinning the adapter in
+# package.json can hold it at a version behind the installed Next.js.
+#
+# Orders are stored in Netlify Blobs rather than on disk — see
+# src/lib/server/db.ts — because a function's filesystem does not survive
+# between requests.
 
 [build]
   command = "npm run build"
-  publish = ".next"
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
 
 [build.environment]
   NODE_VERSION = "22"

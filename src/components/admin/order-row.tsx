@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ChevronDown, ExternalLink } from "lucide-react";
+import { BadgeCheck, ChevronDown, ExternalLink } from "lucide-react";
 import { setOrderStatus, setPaymentStatus } from "@/lib/server/actions";
 import { ORDER_STATUSES, type Order } from "@/lib/types";
 import { formatPrice } from "@/lib/utils";
@@ -115,7 +115,11 @@ export function OrderRow({
             <h3 className="mt-6 text-sm font-semibold">Customer</h3>
             <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
               <div>
-                <dt className="text-xs text-muted">Email</dt>
+                <dt className="flex items-center gap-1 text-xs text-muted">
+                  Email
+                  <BadgeCheck className="size-3 text-emerald-500" aria-hidden />
+                  <span className="sr-only">verified</span>
+                </dt>
                 <dd>
                   <a
                     className="hover:text-brand-600 dark:hover:text-brand-400"
@@ -126,7 +130,11 @@ export function OrderRow({
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-muted">Phone</dt>
+                <dt className="flex items-center gap-1 text-xs text-muted">
+                  Phone
+                  <BadgeCheck className="size-3 text-emerald-500" aria-hidden />
+                  <span className="sr-only">verified</span>
+                </dt>
                 <dd>
                   <a
                     className="hover:text-brand-600 dark:hover:text-brand-400"
@@ -138,9 +146,15 @@ export function OrderRow({
               </div>
               <div className="sm:col-span-2">
                 <dt className="text-xs text-muted">Delivery address</dt>
-                <dd>
-                  {order.customer.address}, {order.customer.city}{" "}
-                  {order.customer.postcode}
+                <dd className="whitespace-pre-line">
+                  {[
+                    order.customer.address,
+                    order.customer.landmark,
+                    `${order.customer.city} ${order.customer.postcode}`,
+                    order.customer.state,
+                  ]
+                    .filter(Boolean)
+                    .join("\n")}
                 </dd>
               </div>
               {order.customer.fileUrl && (
@@ -172,12 +186,19 @@ export function OrderRow({
             <div className="rounded-xl border border-border p-4">
               <h3 className="text-sm font-semibold">Payment</h3>
               <dl className="mt-3 space-y-2 text-sm">
-                <Row label="Method" value="UPI" />
-                <Row label="Paid to" value={order.payment.payeeVpa} />
                 <Row
-                  label="Customer's reference"
-                  value={order.payment.utr ?? "not sent yet"}
+                  label="Method"
+                  value={order.payment.method === "cod" ? "Cash on delivery" : "UPI"}
                 />
+                {order.payment.method === "upi" && (
+                  <>
+                    <Row label="Paid to" value={order.payment.payeeVpa} />
+                    <Row
+                      label="Customer's reference"
+                      value={order.payment.utr ?? "not sent yet"}
+                    />
+                  </>
+                )}
                 {order.payment.submittedAt && (
                   <Row
                     label="Reported"
@@ -204,11 +225,17 @@ export function OrderRow({
               >
                 <option value="unpaid">Unpaid</option>
                 <option value="submitted">Customer says paid</option>
-                <option value="verified">Paid — confirmed in my account</option>
+                <option value="verified">
+                  {order.payment.method === "cod"
+                    ? "Paid — cash collected"
+                    : "Paid — confirmed in my account"}
+                </option>
                 <option value="refunded">Refunded</option>
               </select>
               <p className="mt-2 text-xs text-muted">
-                Check the amount against your UPI app before marking it paid.
+                {order.payment.method === "cod"
+                  ? "Mark this paid once the courier hands over the cash."
+                  : "Check the amount against your UPI app before marking it paid."}
               </p>
             </div>
 

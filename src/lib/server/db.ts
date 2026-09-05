@@ -11,6 +11,8 @@ export type {
   OrderLine,
   OrderStatus,
   StoredProduct,
+  Throttle,
+  Verification,
 } from "@/lib/types";
 export { ORDER_STATUSES } from "@/lib/types";
 
@@ -41,6 +43,8 @@ function seed(): Database {
     orders: [],
     discounts: [],
     expenses: [],
+    verifications: [],
+    throttles: [],
   };
 }
 
@@ -58,6 +62,8 @@ async function loadFromDisk(): Promise<Database> {
       orders: parsed.orders ?? [],
       discounts: parsed.discounts ?? [],
       expenses: parsed.expenses ?? [],
+      verifications: parsed.verifications ?? [],
+      throttles: parsed.throttles ?? [],
     };
   } catch {
     const fresh = seed();

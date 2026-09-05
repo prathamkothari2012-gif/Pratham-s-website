@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { validateContact } from "@/lib/validation";
+import { honeypotTripped, verifyChallenge } from "@/lib/server/pow";
+import { clientIp, rateLimit, tooManyRequests } from "@/lib/server/rate-limit";
+import { isRecord, validateContact } from "@/lib/validation";
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -7,6 +9,23 @@ export async function POST(request: Request) {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+  }
+
+  const data = isRecord(body) ? body : {};
+
+  // Accept-and-drop for obvious bots: a spammer told it failed just retries.
+  if (honeypotTripped(data)) {
+    return NextResponse.json({ ok: true }, { status: 200 });
+  }
+
+  const pow = verifyChallenge("contact", data.challenge, data.solution);
+  if (!pow.ok) {
+    return NextResponse.json({ error: pow.reason }, { status: 400 });
+  }
+
+  const limit = await rateLimit(`contact:${clientIp(request)}`, 8, 60 * 60 * 1000);
+  if (!limit.allowed) {
+    return tooManyRequests(limit.retryAfter, "Too many messages. Try again later.");
   }
 
   const { errors, value } = validateContact(body);

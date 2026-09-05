@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { CheckCircle2, Loader2, Send } from "lucide-react";
+import { useBotShield } from "@/lib/bot-shield";
 import { validateContact, type FieldErrors } from "@/lib/validation";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
+import { Honeypot } from "@/components/ui/honeypot";
 
 type Status = "idle" | "submitting" | "done";
 
@@ -12,6 +14,7 @@ export function ContactForm() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [status, setStatus] = useState<Status>("idle");
   const [failure, setFailure] = useState<string | null>(null);
+  const { solveNow } = useBotShield("contact");
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -29,10 +32,15 @@ export function ContactForm() {
     setStatus("submitting");
 
     try {
+      const { challenge, solution } = await solveNow();
       const response = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          ...payload,
+          challenge,
+          solution,
+        }),
       });
       const data = await response.json();
 
@@ -71,6 +79,8 @@ export function ContactForm() {
       noValidate
       className="rounded-2xl border border-border bg-surface p-6 sm:p-8"
     >
+      <Honeypot />
+
       <div className="grid gap-5">
         <Field label="Your name" name="name" required autoComplete="name" error={errors.name} />
         <Field

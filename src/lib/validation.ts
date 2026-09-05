@@ -21,7 +21,9 @@ export type OrderCustomer = {
   email: string;
   phone: string;
   address: string;
+  landmark: string;
   city: string;
+  state: string;
   postcode: string;
   fileUrl: string;
   notes: string;
@@ -37,7 +39,9 @@ export function validateCustomer(input: unknown): {
     email: str(data.email),
     phone: str(data.phone),
     address: str(data.address),
+    landmark: str(data.landmark),
     city: str(data.city),
+    state: str(data.state),
     postcode: str(data.postcode),
     fileUrl: str(data.fileUrl),
     notes: str(data.notes),
@@ -47,9 +51,12 @@ export function validateCustomer(input: unknown): {
   if (value.name.length < 2) errors.name = "Please enter your name.";
   if (!EMAIL.test(value.email)) errors.email = "Please enter a valid email address.";
   if (!PHONE.test(value.phone)) errors.phone = "Please enter a valid phone number.";
-  if (value.address.length < 5) errors.address = "Please enter your delivery address.";
+  if (value.address.length < 8) {
+    errors.address = "Please enter the full address — house or flat number, street and area.";
+  }
   if (value.city.length < 2) errors.city = "Please enter your city.";
-  if (!/^\d{4,10}$/.test(value.postcode)) errors.postcode = "Please enter a valid PIN code.";
+  if (value.state.length < 2) errors.state = "Please select your state.";
+  if (!/^\d{6}$/.test(value.postcode)) errors.postcode = "Please enter a 6-digit PIN code.";
   if (value.notes.length > 2000) errors.notes = "Please keep notes under 2000 characters.";
   if (value.fileUrl && !/^https?:\/\/\S+$/i.test(value.fileUrl)) {
     errors.fileUrl = "Enter a full link starting with https://";

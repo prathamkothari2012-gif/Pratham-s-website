@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CheckCircle2 } from "lucide-react";
+import { Banknote, CheckCircle2 } from "lucide-react";
 import { site } from "@/content/site";
 import { readDb } from "@/lib/server/db";
 import { buildPaymentInstructions } from "@/lib/server/payment";
@@ -33,10 +33,13 @@ export default async function OrderPage({ params, searchParams }: Props) {
   // enough, so orders cannot be enumerated.
   if (!order || !t || order.accessToken !== t) notFound();
 
-  const payment = await buildPaymentInstructions({
-    amount: order.payment.amount,
-    reference: order.reference,
-  });
+  const payment =
+    order.payment.method === "upi"
+      ? await buildPaymentInstructions({
+          amount: order.payment.amount,
+          reference: order.reference,
+        })
+      : null;
 
   return (
     <Container className="max-w-2xl py-12 sm:py-16">
@@ -55,13 +58,38 @@ export default async function OrderPage({ params, searchParams }: Props) {
       </div>
 
       <div className="mt-8">
-        <UpiPayment
-          reference={order.reference}
-          accessToken={order.accessToken}
-          payment={payment}
-          initialStatus={order.payment.status}
-          initialUtr={order.payment.utr}
-        />
+        {payment ? (
+          <UpiPayment
+            reference={order.reference}
+            accessToken={order.accessToken}
+            payment={payment}
+            initialStatus={order.payment.status}
+            initialUtr={order.payment.utr}
+          />
+        ) : (
+          <div className="rounded-2xl border border-border bg-surface p-6 text-center">
+            <Banknote className="mx-auto size-8 text-brand-500" aria-hidden />
+            <h2 className="mt-3 font-semibold">
+              {order.payment.status === "verified"
+                ? "Paid on delivery"
+                : "Cash on delivery"}
+            </h2>
+            <p className="mt-2 text-sm/6 text-muted">
+              {order.payment.status === "verified" ? (
+                <>This order is settled. Thanks!</>
+              ) : (
+                <>
+                  Have{" "}
+                  <span className="font-semibold text-foreground">
+                    {formatPrice(order.payment.amount)}
+                  </span>{" "}
+                  ready when your parcel arrives. We will call you before
+                  dispatching.
+                </>
+              )}
+            </p>
+          </div>
+        )}
       </div>
 
       <section className="mt-6 rounded-2xl border border-border bg-surface p-6">

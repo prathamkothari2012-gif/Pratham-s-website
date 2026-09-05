@@ -55,11 +55,13 @@ export const PAYMENT_STATUSES: PaymentStatus[] = [
   "refunded",
 ];
 
+export type PaymentMethod = "upi" | "cod";
+
 export type Payment = {
-  method: "upi";
+  method: PaymentMethod;
   status: PaymentStatus;
   /** The UPI ID the customer was asked to pay, captured at order time so a
-   *  later change of UPI ID does not rewrite old orders. */
+   *  later change of UPI ID does not rewrite old orders. Empty for COD. */
   payeeVpa: string;
   amount: number;
   /** The 12-digit UTR / reference the customer reads off their UPI app. */
@@ -79,10 +81,13 @@ export type Order = {
   payment: Payment;
   customer: {
     name: string;
+    /** Confirmed by one-time code before the order was accepted. */
     email: string;
     phone: string;
     address: string;
+    landmark: string;
     city: string;
+    state: string;
     postcode: string;
     fileUrl: string;
     notes: string;
@@ -122,9 +127,36 @@ export type Expense = {
   amount: number;
 };
 
+/** A one-time code sent to an email address or phone number. Persisted rather
+ *  than held in memory because the send and check endpoints are separate route
+ *  bundles, and Next.js gives each its own module instance — an in-memory Map
+ *  written by one would be invisible to the other. */
+export type Verification = {
+  id: string;
+  channel: "email" | "phone";
+  /** Normalised address or number the code was sent to. */
+  value: string;
+  /** SHA-256 of the code. The plain code is never stored. */
+  codeHash: string;
+  createdAt: string;
+  expiresAt: string;
+  /** Wrong guesses so far, so a code can be burned after a few. */
+  attempts: number;
+  consumedAt: string | null;
+};
+
+/** Counter for one rate-limit bucket, e.g. "otp-send:203.0.113.4". */
+export type Throttle = {
+  key: string;
+  count: number;
+  resetAt: string;
+};
+
 export type Database = {
   products: StoredProduct[];
   orders: Order[];
   discounts: Discount[];
   expenses: Expense[];
+  verifications: Verification[];
+  throttles: Throttle[];
 };

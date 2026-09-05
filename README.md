@@ -23,7 +23,7 @@ The dashboard lives at `/admin`. In development the password is `spoolhouse`.
 | `/shop` | Service catalog with category filtering |
 | `/shop/[slug]` | Product page with an option configurator and live pricing |
 | `/cart` | Cart, editable quantities, discount code entry |
-| `/checkout` | Customer and delivery details, places the order |
+| `/checkout` | Verified contact details, delivery address, payment choice |
 | `/order/[ref]` | Payment page — UPI QR, deep link, UTR entry (token-guarded) |
 | `/contact` | Quote enquiry form |
 
@@ -79,10 +79,52 @@ deploy there, reimplement `readDb` and `writeDb` in `src/lib/server/db.ts`
 against a real database — Postgres, Supabase, Turso. Nothing else in the app
 touches the file.
 
+## Verified customers
+
+Before an order can be placed the customer must confirm **both** their email
+address and their mobile number with a 6-digit code.
+
+The browser never sends a "verified" flag. A successful code check returns an
+HMAC-signed token bound to that exact address or number, and
+`/api/orders` re-checks the signature against the details on the order. A
+forged token, or one issued for a different address, is refused.
+
+Codes are stored hashed, expire in 10 minutes, are burned after 5 wrong
+guesses, and are limited to 5 per address and 10 per IP per hour.
+
+With no provider configured the code is written to the server log (and, in
+development only, returned to the browser) so the flow works on a fresh clone.
+See `.env.example` for wiring up Resend for email; the SMS adapter in
+`src/lib/server/notify.ts` is a stub to fill in against your provider.
+
+## Bot protection
+
+Four layers, none of which needs a third-party account or shows the visitor a
+puzzle:
+
+1. **Proof of work.** Every public form must solve a hashcash-style challenge
+   before the server will look at it — a few hundred milliseconds once,
+   ruinous for a bot posting thousands of times. Challenges are HMAC-signed
+   and scoped to one form, so one cannot be replayed against another.
+2. **Timing.** The challenge is fetched when the form mounts and carries a
+   server-issued timestamp, so a submission faster than a person could type is
+   rejected. Because the server issued that timestamp, a bot cannot fake it.
+3. **Honeypot.** A hidden field no real person fills in. Submissions carrying
+   a value are accepted and silently dropped — telling a spammer it failed
+   only helps it adapt.
+4. **Rate limits.** Per IP and per target, persisted in the datastore so they
+   hold across route handlers.
+
+Chosen over a hosted CAPTCHA because it sends no visitor data anywhere and
+works for people using screen readers or blocking trackers. It is not
+unbreakable — a determined attacker can pay the cost — which is why the layers
+sit together rather than alone.
+
 ## Payments
 
-Customers pay by **UPI, directly to the shop's UPI ID** — no gateway, no
-per-transaction fee, no third party holding the money.
+Two options at checkout: **cash on delivery**, or **UPI paid directly to the
+shop's UPI ID** — no gateway, no per-transaction fee, no third party holding
+the money.
 
 After checkout the customer gets a payment page (`/order/<ref>?t=<token>`)
 with a QR code and an "Open my UPI app" link. Both are built from the NPCI
@@ -95,13 +137,14 @@ the exact VPA registered against the phone number — the handle differs by app
 Copy it from the UPI app rather than guessing; a wrong handle means payments
 silently fail.
 
-**One thing to be clear about:** a direct-to-VPA setup has no callback. Nothing
-tells the server when money arrives. So the flow is:
+**One thing to be clear about:** neither method confirms itself. A direct-to-VPA
+setup has no callback, and cash obviously has none either. So the flow is:
 
 1. Customer pays and enters the UTR their UPI app shows them.
 2. The order moves to *Awaiting check*.
 3. The owner confirms it against their account in `/admin/orders` and marks it
-   **Paid**.
+   **Paid**. For COD, the owner marks it paid once the courier hands over the
+   cash.
 
 Because of that, **unpaid orders are not counted as revenue**. The P&L is cash
 basis — only payments the owner has verified. Money owed shows separately as

@@ -4,6 +4,9 @@ import { site } from "@/content/site";
 import { calculateTotals, priceLine } from "@/lib/pricing";
 import { newId, writeDb, type Order, type OrderLine } from "@/lib/server/db";
 import { buildPaymentInstructions } from "@/lib/server/payment";
+import { verifyToken } from "@/lib/server/otp";
+import { honeypotTripped, verifyChallenge } from "@/lib/server/pow";
+import { clientIp, rateLimit, tooManyRequests } from "@/lib/server/rate-limit";
 import { isRecord, parseLines, validateCustomer } from "@/lib/validation";
 
 /** Human-friendly order reference, e.g. SH-4F2A9C. */
@@ -23,7 +26,35 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
+  // Bot checks first: they are cheap and reject the bulk of junk before any
+  // pricing work happens.
+  if (honeypotTripped(body)) {
+    return NextResponse.json({ error: "Could not place that order." }, { status: 400 });
+  }
+
+  const pow = verifyChallenge("order", body.challenge, body.solution);
+  if (!pow.ok) {
+    return NextResponse.json({ error: pow.reason }, { status: 400 });
+  }
+
+  const limit = await rateLimit(`order:${clientIp(request)}`, 12, 60 * 60 * 1000);
+  if (!limit.allowed) {
+    return tooManyRequests(limit.retryAfter, "Too many orders from this connection.");
+  }
+
   const { errors, value: customer } = validateCustomer(body.customer);
+
+  // The browser sends signed tokens, not a "verified: true" flag. Each one is
+  // re-checked here against the exact address and number on the order, so a
+  // forged token — or one issued for a different address — is refused.
+  if (!verifyToken("email", customer.email, body.emailToken)) {
+    errors.email = "Please verify your email address with the code we send you.";
+  }
+  if (!verifyToken("phone", customer.phone, body.phoneToken)) {
+    errors.phone = "Please verify your phone number with the code we send you.";
+  }
+
+  const paymentMethod = body.paymentMethod === "cod" ? "cod" : "upi";
   const incoming = parseLines(body.lines);
   const discountCode =
     typeof body.discountCode === "string" ? body.discountCode : "";
@@ -94,9 +125,10 @@ export async function POST(request: Request) {
       // Unguessable, so the payment page cannot be found by trying references.
       accessToken: randomBytes(16).toString("hex"),
       payment: {
-        method: "upi",
+        method: paymentMethod,
         status: "unpaid",
-        payeeVpa: site.payment.upiId,
+        // Nothing to pay online for cash on delivery.
+        payeeVpa: paymentMethod === "upi" ? site.payment.upiId : "",
         amount: totals.total,
         utr: null,
         submittedAt: null,
@@ -119,13 +151,17 @@ export async function POST(request: Request) {
     );
   }
 
-  // The customer pays by UPI straight to the shop's VPA. Nothing calls back
-  // to say the money arrived, so the order stays "unpaid" until the customer
-  // reports a UTR and the owner verifies it in /admin.
-  const payment = await buildPaymentInstructions({
-    amount: order.totals.total,
-    reference: order.reference,
-  });
+  // UPI is paid straight to the shop's VPA. Nothing calls back to say the
+  // money arrived, so the order stays "unpaid" until the customer reports a
+  // UTR and the owner verifies it. COD is collected on delivery, so there is
+  // nothing to show now.
+  const payment =
+    order.payment.method === "upi"
+      ? await buildPaymentInstructions({
+          amount: order.totals.total,
+          reference: order.reference,
+        })
+      : null;
 
   // INTEGRATION POINT — to automate payment confirmation, swap this for a
   // Razorpay/Stripe session and mark the order paid from their webhook.
@@ -136,6 +172,7 @@ export async function POST(request: Request) {
       reference: order.reference,
       accessToken: order.accessToken,
       totals: order.totals,
+      paymentMethod: order.payment.method,
       payment,
     },
     { status: 201 },

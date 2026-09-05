@@ -8,6 +8,11 @@ import { Testimonials } from "@/components/sections/testimonials";
 import { Faq } from "@/components/sections/faq";
 import { Cta } from "@/components/sections/cta";
 
+/** The catalog is edited from the dashboard, so this renders per request
+ *  rather than being frozen at build time. It also keeps the build from
+ *  needing the datastore, which is not reachable while building. */
+export const dynamic = "force-dynamic";
+
 export default function HomePage() {
   return (
     <>

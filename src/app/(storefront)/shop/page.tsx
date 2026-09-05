@@ -10,6 +10,11 @@ export const metadata: Metadata = {
   alternates: { canonical: "/shop" },
 };
 
+/** The catalog is edited from the dashboard, so this renders per request
+ *  rather than being frozen at build time. It also keeps the build from
+ *  needing the datastore, which is not reachable while building. */
+export const dynamic = "force-dynamic";
+
 export default async function ShopPage() {
   const products = await getActiveProducts();
 

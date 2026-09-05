@@ -28,6 +28,22 @@ export function blobsBackend(
   const store = () => getStore({ name: STORE, consistency: "strong" });
 
   async function load(): Promise<{ db: Database; etag: string | undefined }> {
+    // Blobs is not reachable while the site is being built — there is no
+    // siteID or token in the build environment. Pages that read data are
+    // marked dynamic so this should not happen, but falling back to the seed
+    // keeps a stray build-time read from failing the whole deploy. At runtime
+    // errors still propagate, so a real outage is never silently hidden.
+    if (process.env.NEXT_PHASE === "phase-production-build") {
+      try {
+        const found = await store().getWithMetadata(KEY, { type: "json" });
+        return found
+          ? { db: merge(found.data), etag: found.etag }
+          : { db: seed(), etag: undefined };
+      } catch {
+        return { db: seed(), etag: undefined };
+      }
+    }
+
     const found = await store().getWithMetadata(KEY, { type: "json" });
     if (!found) return { db: seed(), etag: undefined };
     return { db: merge(found.data), etag: found.etag };

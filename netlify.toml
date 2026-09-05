@@ -14,6 +14,10 @@
 # between requests.
 
 [build]
+  # Built with webpack, not Turbopack. Next.js 16 defaults to Turbopack, and
+  # the Netlify Next.js adapter fails against that output — the deploy dies
+  # with "error in @netlify/plugin-nextjs". The build script carries the
+  # --webpack flag; this comment is here so nobody removes it.
   command = "npm run build"
 
 [build.environment]

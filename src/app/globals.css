@@ -1,0 +1,118 @@
+@import "tailwindcss";
+
+/* Enable a class-based dark mode alongside the OS preference, so the
+   header toggle can override `prefers-color-scheme`. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* Brand ramp, built from the four-colour palette:
+     #1B262C ink · #0F4C75 deep · #3282B8 primary · #BBE1FA pale.
+     The four are pinned at 900/700/500/200; the rest are interpolated to give
+     the shades hover, borders and tints need. Swap these to re-skin the site. */
+  --color-brand-50: #f2f9fe;
+  --color-brand-100: #ddeefc;
+  --color-brand-200: #bbe1fa;
+  --color-brand-300: #8cc6e8;
+  --color-brand-400: #59a5d3;
+  --color-brand-500: #3282b8;
+  --color-brand-600: #216894;
+  --color-brand-700: #0f4c75;
+  --color-brand-800: #0c3a58;
+  --color-brand-900: #1b262c;
+
+  --animate-marquee: marquee 40s linear infinite;
+  --animate-rise: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(1rem);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+/* Semantic surface tokens, defined light-first then overridden for dark.
+   Light mode reads as cool paper; dark mode sits on the palette's #1B262C. */
+:root {
+  --background: #f7fafc;
+  --foreground: #1b262c;
+  --muted: #5a6b76;
+  --surface: #ffffff;
+  --border: #dbe6ee;
+}
+
+.dark {
+  --background: #1b262c;
+  --foreground: #e8f2fa;
+  /* Softer than the palette's #BBE1FA, which is too saturated for long
+     stretches of secondary text. */
+  --muted: #92abbd;
+  --surface: #22323c;
+  --border: #33454f;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    /* Keep anchored sections clear of the sticky header. */
+    scroll-padding-top: 5rem;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background-color: var(--color-brand-500);
+    color: white;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

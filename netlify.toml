@@ -1,0 +1,39 @@
+# Netlify deployment config.
+#
+# Deliberately minimal: Netlify detects Next.js and installs its own adapter,
+# which sets the publish directory and provisions the functions that run
+# server components, route handlers and Server Actions.
+#
+# Do NOT add `publish` or a [[plugins]] block for @netlify/plugin-nextjs here.
+# Setting publish to ".next" makes Netlify serve the raw build folder as static
+# files, which returns 404 for every route, and pinning the adapter in
+# package.json can hold it at a version behind the installed Next.js.
+#
+# Orders are stored in Netlify Blobs rather than on disk — see
+# src/lib/server/db.ts — because a function's filesystem does not survive
+# between requests.
+
+[build]
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Never let a crawler index the dashboard or a customer's order page, whatever
+# a stray link might say.
+[[headers]]
+  for = "/admin/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/order/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "SAMEORIGIN"

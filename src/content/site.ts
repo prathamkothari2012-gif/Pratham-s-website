@@ -10,7 +10,9 @@ export const site = {
   tagline: "Custom 3D printing, made simple",
   description:
     "Upload a model or describe an idea and we print it in PLA, PETG, TPU or resin. Fast turnarounds, honest pricing and parts that actually fit.",
-  url: "https://3dspoolhouse.com",
+  /** Fallback only. On Netlify the live address is picked up from the build
+   *  environment; set SITE_URL once a custom domain is attached. */
+  url: "https://3dspoolhouse.netlify.app",
   locale: "en_IN",
 
   contact: {

@@ -2,9 +2,11 @@ import Link from "next/link";
 import { ArrowRight, PackageX, Wallet } from "lucide-react";
 import { getAnalytics } from "@/lib/server/analytics";
 import { readDb } from "@/lib/server/db";
+import { deploymentChecks } from "@/lib/server/deployment";
 import { formatPrice } from "@/lib/utils";
 import { StatCard, delta } from "@/components/admin/stat-card";
 import { ProfitChart } from "@/components/admin/profit-chart";
+import { DeploymentPanel } from "@/components/admin/deployment-panel";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 
 export default async function AdminOverviewPage() {
@@ -32,6 +34,8 @@ export default async function AdminOverviewPage() {
           <ArrowRight className="size-4" aria-hidden />
         </Link>
       </div>
+
+      <DeploymentPanel checks={deploymentChecks()} />
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard

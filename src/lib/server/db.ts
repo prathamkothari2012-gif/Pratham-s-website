@@ -1,7 +1,9 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
+import "server-only";
 import { products as seedProducts } from "@/content/catalog";
 import type { Database } from "@/lib/types";
+import type { Backend } from "@/lib/server/backend";
+import { fileBackend } from "@/lib/server/store-file";
+import { blobsBackend } from "@/lib/server/store-blobs";
 
 export type {
   Database,
@@ -17,20 +19,17 @@ export type {
 export { ORDER_STATUSES } from "@/lib/types";
 
 /**
- * A small JSON-file datastore.
+ * The datastore.
  *
- * It is deliberately dependency-free so the dashboard works the moment you
- * clone the repo. It suits a single Node process — a VPS, a container, or
- * `next start` on one machine.
+ * Two backends sit behind one interface: a JSON file for a normal server, and
+ * Netlify Blobs for serverless. Netlify gives every request a throwaway
+ * filesystem, so the file backend would quietly lose orders there — the
+ * backend is chosen from the environment rather than left to be configured
+ * wrong.
  *
- * It does NOT suit serverless hosting (Vercel, Netlify functions), where the
- * filesystem is ephemeral and every request may hit a different instance.
- * To move to a real database, reimplement `readDb`/`writeDb` against your
- * client of choice; nothing else in the app touches the file.
+ * To move to a real database, implement `Backend` (two methods) and select it
+ * below. Nothing else in the app touches storage.
  */
-
-const DATA_DIR = process.env.DATA_DIR ?? path.join(process.cwd(), "data");
-const DB_PATH = path.join(DATA_DIR, "store.json");
 
 /** Seed cost prices at roughly 40% of the sale price until the owner edits them. */
 function seed(): Database {
@@ -48,68 +47,52 @@ function seed(): Database {
   };
 }
 
-/** Serialises writes so two concurrent requests cannot interleave and lose an
- *  update. */
-let queue: Promise<unknown> = Promise.resolve();
-
-async function loadFromDisk(): Promise<Database> {
-  try {
-    const raw = await fs.readFile(DB_PATH, "utf8");
-    const parsed = JSON.parse(raw) as Partial<Database>;
-    // Tolerate a file written by an older version missing newer collections.
-    return {
-      products: parsed.products ?? seed().products,
-      orders: parsed.orders ?? [],
-      discounts: parsed.discounts ?? [],
-      expenses: parsed.expenses ?? [],
-      verifications: parsed.verifications ?? [],
-      throttles: parsed.throttles ?? [],
-    };
-  } catch {
-    const fresh = seed();
-    await persist(fresh);
-    return fresh;
-  }
+/** Tolerates a stored copy written by an older version that predates a
+ *  collection, so a deploy never starts from a half-read database. */
+function merge(raw: unknown): Database {
+  const parsed = (raw ?? {}) as Partial<Database>;
+  return {
+    products: parsed.products ?? seed().products,
+    orders: parsed.orders ?? [],
+    discounts: parsed.discounts ?? [],
+    expenses: parsed.expenses ?? [],
+    verifications: parsed.verifications ?? [],
+    throttles: parsed.throttles ?? [],
+  };
 }
 
-async function persist(db: Database): Promise<void> {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  // Write to a temp file then rename, so a crash mid-write cannot truncate
-  // the store.
-  const tmp = `${DB_PATH}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(db, null, 2), "utf8");
-  await fs.rename(tmp, DB_PATH);
+/** Netlify sets NETLIFY=true in its build and function runtimes. */
+export function onNetlify(): boolean {
+  return process.env.NETLIFY === "true" || !!process.env.NETLIFY_BLOBS_CONTEXT;
+}
+
+let backend: Backend | null = null;
+
+function selected(): Backend {
+  backend ??= onNetlify() ? blobsBackend(seed, merge) : fileBackend(seed, merge);
+  return backend;
+}
+
+export function backendName(): Backend["name"] {
+  return selected().name;
+}
+
+export async function readDb(): Promise<Database> {
+  return selected().read();
 }
 
 /**
- * Always reads from disk rather than holding an in-memory copy.
+ * Mutate the database.
  *
- * Next.js instantiates server modules per route bundle, so a cache populated
- * while rendering one route is invisible to — and quickly stale in — another.
- * A write from the dashboard would then never show up on the storefront. The
- * file is small and the OS page cache absorbs the reads, so this is the
- * correct trade.
+ * The mutation may be run more than once: the Netlify backend retries it
+ * against fresher data when another request commits first. Keep mutations a
+ * function of the database they are handed rather than of anything captured
+ * from outside.
  */
-export async function readDb(): Promise<Database> {
-  return loadFromDisk();
-}
-
-/** Mutate the database under the write lock. The mutation may return a value,
- *  which is handed back to the caller once the write has landed. */
 export async function writeDb<T>(
   mutate: (db: Database) => T | Promise<T>,
 ): Promise<T> {
-  const run = queue.then(async () => {
-    // Re-read inside the lock so the mutation always sees the latest state,
-    // including writes made by another route since this request began.
-    const db = await loadFromDisk();
-    const result = await mutate(db);
-    await persist(db);
-    return result;
-  });
-  // Keep the chain alive even if this mutation throws.
-  queue = run.catch(() => undefined);
-  return run;
+  return selected().write(mutate);
 }
 
 export function newId(prefix: string): string {

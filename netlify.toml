@@ -1,0 +1,35 @@
+# Netlify deployment config.
+#
+# The Next.js plugin turns the App Router build into Netlify Functions, so
+# server components, route handlers and Server Actions all work. Orders are
+# stored in Netlify Blobs rather than on disk — see src/lib/server/db.ts —
+# because a function's filesystem does not survive between requests.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Never let a crawler index the dashboard or a customer's order page, whatever
+# a stray link might say.
+[[headers]]
+  for = "/admin/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/order/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "SAMEORIGIN"

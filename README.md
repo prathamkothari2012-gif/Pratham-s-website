@@ -65,19 +65,53 @@ DATA_DIR=         # optional, where the datastore is written (default ./data)
 The app refuses to serve the dashboard in production while either of the first
 two is unset.
 
+## Deploying to Netlify
+
+```bash
+# Push the repo to GitHub, then in Netlify: Add new site -> Import from Git.
+# netlify.toml already sets the build command, publish directory and plugin,
+# so the defaults it offers are correct.
+```
+
+Set these environment variables in **Site settings -> Environment variables**:
+
+| Variable | Why |
+| --- | --- |
+| `ADMIN_PASSWORD` | Dashboard password. The app refuses to serve `/admin` without it. |
+| `AUTH_SECRET` | Signs sessions, verification tokens and bot challenges. Generate 32 random bytes. |
+| `RESEND_API_KEY` | Sends email verification codes. Without it nobody can check out. |
+| `MAIL_FROM` | The address codes are sent from. Needs a domain you control. |
+
+`SITE_URL` is optional — Netlify provides the site address at build time, so
+canonical links and the sitemap are correct on `*.netlify.app` with no
+configuration. Set it once you attach a real domain.
+
 ## Data storage
 
-Orders, products, discounts and expenses are kept in a JSON file at
-`$DATA_DIR/store.json` (`./data/store.json` by default). This has no
-dependencies and works immediately, but it assumes **a single Node process
-with a persistent disk** — a VPS, a Docker container with a mounted volume, or
-`next start` on one machine.
+Two backends behind one interface, chosen from the environment so it cannot be
+configured wrong:
 
-It is **not** suitable for serverless hosting (Vercel, Netlify functions),
-where the filesystem is ephemeral and requests hit different instances. To
-deploy there, reimplement `readDb` and `writeDb` in `src/lib/server/db.ts`
-against a real database — Postgres, Supabase, Turso. Nothing else in the app
-touches the file.
+- **Netlify Blobs** when running on Netlify. Netlify gives each request a
+  throwaway filesystem, so a file-based store would silently lose orders.
+  Writes use compare-and-swap on the stored etag: two function instances can
+  run at once and do not share memory, so a lock would not help — the loser of
+  a race re-reads and reapplies instead.
+- **A JSON file** everywhere else, at `$DATA_DIR/store.json`
+  (`./data/store.json` by default). Suits a VPS, Docker with a mounted volume,
+  or `next start` locally.
+
+To use a real database instead — Postgres, Supabase, Turso — implement the
+two-method `Backend` type in `src/lib/server/backend.ts` and select it in
+`src/lib/server/db.ts`. Nothing else in the app touches storage.
+
+Because mutations may be retried against fresher data, keep them a function of
+the database they are handed rather than of anything captured from outside.
+
+## Is it ready to take orders?
+
+The dashboard overview shows a setup panel listing anything unfinished —
+missing email provider, default dashboard password, and so on. It disappears
+once everything is wired up. Worth checking straight after the first deploy.
 
 ## Verified customers
 

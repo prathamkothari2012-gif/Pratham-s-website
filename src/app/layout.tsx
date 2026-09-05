@@ -2,12 +2,13 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { site } from "@/content/site";
+import { siteUrl } from "@/lib/server/deployment";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(site.url),
+  metadataBase: new URL(siteUrl()),
   title: {
     default: `${site.name} — ${site.tagline}`,
     template: `%s — ${site.name}`,
@@ -22,7 +23,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     type: "website",
-    url: site.url,
+    url: siteUrl(),
     siteName: site.name,
     title: `${site.name} — ${site.tagline}`,
     description: site.description,

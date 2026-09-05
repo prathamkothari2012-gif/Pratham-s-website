@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
+import { SESSION_COOKIE } from "@/lib/session";
 
 /**
  * Single-owner authentication: one shared password, exchanged for an
@@ -7,7 +8,8 @@ import { cookies } from "next/headers";
  * is exactly one user — the shop owner.
  */
 
-export const SESSION_COOKIE = "spoolhouse_admin";
+// Re-exported so server code has one obvious import for it.
+export { SESSION_COOKIE };
 const SESSION_TTL_MS = 1000 * 60 * 60 * 12; // 12 hours
 
 /** Dev fallbacks keep `npm run dev` working on a fresh clone. Both MUST be set
